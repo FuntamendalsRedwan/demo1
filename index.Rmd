@@ -1,0 +1,140 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+---
+
+# starting fresh
+
+```{r}
+rm(list = ls()) #clean all existing var
+```
+
+#Get the data
+
+```{r}
+linkGit="https://github.com/FuntamendalsRedwan/demo1/raw/refs/heads/main/FSI-2023-DOWNLOAD.xlsx" # link location for the data
+```
+
+## variable that holds the data from the file
+```{r}
+library(rio) # load library
+fragility23=rio::import(file = linkGit) # put file into this var
+```
+
+#Exploratory Commnads 
+## get column names
+```{r}
+names(x = fragility23) # print column names
+```
+
+## check the data types
+```{r}
+str(object = fragility23) # print data types of all columns
+```
+
+## first 10 rows
+```{r}
+head(x = fragility23,10) # print first 10 lines
+```
+
+## last 10 rows
+```{r}
+tail(fragility23,10) # print last 10 lines
+```
+
+#transformation commands \## make a subset of these columns \## Country, Total, S1, P1, E2
+## search for the fill names of the columns and put the full names into keep
+```{r}
+keep=grep("Country|S1|P1|E2|Total",names(fragility23),fixed = F,value = T) # get full column names
+keep # print out the value
+```
+
+## make a subset that will only have the columns we want
+```{r}
+frag23_sub=fragility23[,keep] # make a subset taht only has columns we want
+```
+
+## shorten the names of the columns for ease of use
+```{r}
+names(frag23_sub)[3:5]=c("S1","E2", "P1") # rename the columns
+```
+
+## sort by "E2" and print the top 10 counties data
+```{r}
+tail(frag23_sub[order(x=-frag23_sub$E2),],10) # sort by E2 and print top 10
+```
+
+## if you want to do the above but only the country names
+```{r}
+tail(frag23_sub[order(x=-frag23_sub$E2),'Country'],10) # only print out top 10 country names after sort
+```
+
+#Some Computations \## give the statistical description of "frag23_sub" \## such as mean, median, mode, quartiles
+```{r}
+summary(object = frag23_sub) # prints summary of data
+```
+
+## the value of the worst quartile of Total
+
+```{r}
+q3_Total=quantile(x = frag23_sub$Total, 
+                  probs = 0.75, 
+                  na.rm = TRUE)  
+# do quantile on column total and ignore empty cells
+q3_Total #print out the value
+```
+
+## find correlations between "S1","E2", "P1"
+
+```{r}
+# get correlation, no significance here
+cor(x=frag23_sub[,-c(1,2)]) # exclude country and total
+```
+
+## show correlations between "S1","E2", "P1" and their "significance"
+
+```{r}
+library(corrtable) # load library
+corrtable::correlation_matrix(df = frag23_sub[,-c(1,2)]) # get correlation and significance
+```
+
+## regress P1 and E2 on S1
+```{r}
+lm(S1~P1+E2,data=frag23_sub) # do linear regression with S1 as dependent and P1 and E2 as independent vars
+model <- lm(S1 ~ P1 + E2, data = frag23_sub) # save info into var
+summary(model) #prints the details of the regression
+```
+
+# some plotting
+## plot for the 'P1' variable
+```{r}
+hist(x = frag23_sub$P1) # plot 'P1'
+```
+
+## visual correlation between S1 and E2
+```{r}
+plot(x=frag23_sub$S1, y=frag23_sub$E2) # plot S1 vs E2
+```
+
+## color points if country is on the worst quartile of Total
+## adds a column for worstQT
+```{r}
+frag23_sub$Total>=q3_Total # find which ones are higher than q3_total
+frag23_sub$worstQt=frag23_sub$Total>=q3_Total 
+# add a column to store that info into the subset data
+```
+
+## use the new column to color the plot from before
+```{r}
+plot(frag23_sub$S1, 
+     frag23_sub$E2,pch=20,
+     col = as.factor(frag23_sub$worstQt)) #plot S1 vs E2, but color code based on if better than worst_QT
+```
+
+# visual of the regression P1 and E2 on S1
+```{r}
+library(sjPlot) #laod libaray
+plot_models(model) # plot the model for visual of the regesion
+```
